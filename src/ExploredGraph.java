@@ -1,16 +1,6 @@
 import sun.awt.image.ImageWatched;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
-import java.util.Stack;
-import java.util.Queue;
+import java.util.*;
 import java.util.function.Function;
 
 /**
@@ -53,12 +43,13 @@ public class ExploredGraph {
     private void setOperators() {
         // (i, j) = {(0, 1), (0, 2), (1, 0), (1, 2), (2, 0), (2, 1)}
         operators = new ArrayList<Operator>();
-        operators.add(new Operator(0, 1));
-        operators.add(new Operator(0, 2));
-        operators.add(new Operator(1, 0));
-        operators.add(new Operator(1, 2));
-        operators.add(new Operator(2, 0));
-        operators.add(new Operator(2, 1));
+        for (int beginPeg = 0; beginPeg < NUMBER_OF_PEGS; beginPeg++) {
+            for (int endPeg = 0; endPeg < NUMBER_OF_PEGS; endPeg++) {
+                if (endPeg != beginPeg) {
+                    operators.add(new Operator(beginPeg, endPeg));
+                }
+            }
+        }
     }
 
     public int nvertices() {
@@ -70,18 +61,16 @@ public class ExploredGraph {
     }
 
     public void dfs(Vertex vi, Vertex vj) {
-        // TODO: Reset all private fields and
-        // implement depth first search algorithm
-        // Hints: Choose the right data structure between queue and stack
-        // You may need a private method to do the recursion if you need
         initialize();
+        Ve.add(vi);
+        VeSize++;
         map.put(vi, new LinkedList<Edge>());
         dfsHelper(vi, vj);
     }
 
     private boolean dfsHelper(Vertex currVertex, Vertex vj) {
-        boolean foundSolution = false;
         if (currVertex != vj) {
+            boolean foundSolution = false;
             for (int currOperatorIndex = 0; currOperatorIndex < operators.size() && !foundSolution; currOperatorIndex++) {
                 Operator currOperator = operators.get(currOperatorIndex);
                 if (currOperator.getPrecondition().apply(currVertex)) {
@@ -101,24 +90,22 @@ public class ExploredGraph {
     }
 
     public void bfs(Vertex vi, Vertex vj) {
-        // TODO: Reset all private fields and
-        // implement breath first search algorithm
-        // Hints: Choose the right data structure between queue and stack
-        // You may need a private method to do the recursion if you need
         initialize();
         Queue<Vertex> verticesToExplore = new LinkedList<Vertex>();
+        Ve.add(vi);
+        VeSize++;
         verticesToExplore.add(vi);
         map.put(vi, new LinkedList<Edge>());
         boolean reachedEnd = false;
-        while (!(verticesToExplore.isEmpty() || reachedEnd)) {
+        while (!verticesToExplore.isEmpty() && !reachedEnd) {
             Vertex currVertex = verticesToExplore.remove();
-            Ve.add(currVertex);
-            VeSize++;
             for (int currOperatorIndex = 0; currOperatorIndex < operators.size() && !reachedEnd; currOperatorIndex++) {
                 Operator currOperator = operators.get(currOperatorIndex);
                 if (currOperator.getPrecondition().apply(currVertex)) {
                     Vertex newVertex = currOperator.getTransition().apply(currVertex);
                     if (!Ve.contains(newVertex)) {
+                        Ve.add(newVertex);
+                        VeSize++;
                         addNewEdge(currVertex, newVertex);
                         if (newVertex.equals(vj)) {
                             reachedEnd = true;
@@ -135,19 +122,17 @@ public class ExploredGraph {
         Edge newEdge = new Edge(currVertex, newVertex);
         Ee.add(newEdge);
         EeSize++;
-        LinkedList<Edge> newVertexPath = (LinkedList<Edge>) map.get(currVertex).clone();
+        LinkedList<Edge> newVertexPath = (LinkedList<Edge>)map.get(currVertex).clone();
         newVertexPath.add(newEdge);
         map.put(newVertex, newVertexPath);
     }
 
     public ArrayList<Vertex> retrievePath(Vertex vj) {
-        // TODO: retrieve the path to the vj(Goal Vertex)
-        // Return a path as an array list
         ArrayList<Vertex> path = new ArrayList<Vertex>();
+        path.add(map.get(vj).getFirst().vi);
         for (Edge currEdge: map.get(vj)) {
-            path.add(currEdge.vi);
+            path.add(currEdge.vj);
         }
-        path.add(map.get(vj).getLast().vj);
         return path;
     }
 
@@ -168,18 +153,23 @@ public class ExploredGraph {
 
     public static void main(String[] args) {
         ExploredGraph eg = new ExploredGraph();
+//        Vertex v0 = eg.new Vertex("[[4,3,2,1],[],[]]");
+//        Vertex v1 = eg.new Vertex("[[],[],[4,3,2,1]]");
+//        eg.shortestPath(v0, v1);
+//        ArrayList<Vertex> answerPath = eg.retrievePath(v1);
+//        for (Vertex vertex: answerPath) {
+//            System.out.println(vertex);
+//        }
+
         Vertex v0 = eg.new Vertex("[[4,3,2,1],[],[]]");
-        Vertex v1 = eg.new Vertex("[[4,2],[3],[1]]");
-        ArrayList<Vertex> answerPath = eg.shortestPath(v0, v1);
+        Vertex v1 = eg.new Vertex("[[],[],[4,3,2,1]]");
+        eg.dfs(v0, v1);
+        ArrayList<Vertex> answerPath = eg.retrievePath(v1);
         for (Vertex vertex: answerPath) {
             System.out.println(vertex);
         }
-        // Test the vertex constructor:
-        // Vertex v0 = eg.new Vertex("[[4,3,2,1],[],[]]");
-        // System.out.println(v0);
-        // Add your own tests here.
-        // The autograder code will be used to test your basic functionality
-        // later.
+        System.out.println("VeSize: " + eg.VeSize);
+        System.out.println("EeSize: " + eg.EeSize);
     }
 
     class Vertex {
@@ -212,7 +202,7 @@ public class ExploredGraph {
                 }
             }
         }
-        
+
         public Vertex(Vertex vertex) {
             pegs = new Stack[vertex.pegs.length];
             for (int index = 0; index < vertex.pegs.length; index++) {
@@ -231,11 +221,11 @@ public class ExploredGraph {
             ans += "]";
             return ans;
         }
-        
+
         @Override
         public boolean equals(Object v) {
             if (v instanceof Vertex)
-                return hashCode() == ((Vertex) v).hashCode();
+                return hashCode() == v.hashCode();
             else
                 return false;
         }
@@ -262,14 +252,14 @@ public class ExploredGraph {
         @Override
         public boolean equals(Object e) {
             if (e instanceof Edge)
-                return hashCode() == ((Edge) e).hashCode();
+                return hashCode() == e.hashCode();
             else
                 return false;
         }
 
         @Override
         public int hashCode() {
-            return vi.hashCode() * vi.hashCode() + vj.hashCode();
+            return vi.hashCode() + vj.hashCode();
         }
     }
 
@@ -292,8 +282,12 @@ public class ExploredGraph {
                     if (!currPeg.empty()) {
                         int diskMoving = currPeg.peek();
                         Stack<Integer> pegToPlaceOn = vertex.pegs[j];
-                        int topDisk = pegToPlaceOn.empty() ? diskMoving + 1 : pegToPlaceOn.peek();
-                        return diskMoving < topDisk;
+                        if (pegToPlaceOn.empty()) {
+                            return true;
+                        } else {
+                            int topDisk = pegToPlaceOn.peek();
+                            return diskMoving < topDisk;
+                        }
                     }
                     return false;
                 }
